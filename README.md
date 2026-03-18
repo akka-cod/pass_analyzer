@@ -2,7 +2,7 @@
 
 Analizador de robustez de contraseñas. Herramienta web de un solo archivo HTML que evalúa la fortaleza de contraseñas y passphrases de forma local y privada.
 
-### Enlace a la web y software actualizado: https://akka-cod.github.io/pass_analyzer/
+#### Enlace público para uso de la herramienta: https://akka-cod.github.io/pass_analyzer/
 
 ## Qué hace
 
