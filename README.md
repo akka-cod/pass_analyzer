@@ -29,4 +29,4 @@ Herramienta desarrollada por el equipo de Desarrollo Tecnológico de **Greenpeac
 
 ---
 
-*Uso interno · Equipo IT · soporte.it.es@greenpeace.org*
+* · Equipo IT · *
