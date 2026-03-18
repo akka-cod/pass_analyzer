@@ -29,4 +29,4 @@ Herramienta desarrollada por el equipo de Desarrollo Tecnológico de **Greenpeac
 
 ---
 
-* · Equipo IT · *
+* · Equipo IT ·
