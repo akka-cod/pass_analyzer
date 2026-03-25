@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.pwnedpasswords.com; img-src 'self' data:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://api.pwnedpasswords.com; img-src data:; frame-ancestors 'none'; form-action 'none';">
+<meta name="referrer" content="no-referrer">
 <title>Analizador de Robustez de Contraseñas</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
 <style>
   :root {
     --gp-green: #00be36;
@@ -25,8 +23,8 @@
     --gp-blue: #45aaf2;
     --gp-purple: #a55eea;
     --radius: 12px;
-    --font-mono: 'JetBrains Mono', monospace;
-    --font-sans: 'DM Sans', system-ui, sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Code', 'Consolas', 'Monaco', 'Liberation Mono', 'Courier New', monospace;
+    --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -478,7 +476,7 @@
         </div>
         <div class="metric-value" id="metricPool">—</div>
         <div class="metric-label">Pool de caracteres
-          <span class="info-tip tip-left" tabindex="0"><span class="info-content">Número total de caracteres posibles por posición si un atacante usara <strong>fuerza bruta pura</strong>: minúsculas (26) + mayúsculas (26) + dígitos (10) + símbolos (33) + espacios (1). Un pool mayor dificulta los ataques de fuerza bruta, pero no protege contra ataques de diccionario.</span></span>
+          <span class="info-tip tip-left" tabindex="0"><span class="info-content">Número total de caracteres posibles por posición si un atacante usara <strong>fuerza bruta pura</strong>: minúsculas (26) + mayúsculas (26) + dígitos (10) + símbolos (32) + espacios (1). Un pool mayor dificulta los ataques de fuerza bruta, pero no protege contra ataques de diccionario.</span></span>
         </div>
       </div>
       <div class="metric-card">
@@ -529,7 +527,7 @@
     <!-- Crack time -->
     <div class="card">
       <div class="section-title">⏱️ Tiempo estimado de descifrado
-        <span class="info-tip" tabindex="0"><span class="info-content">Tiempo medio estimado para descifrar la contraseña en 4 escenarios reales de ataque, usando las <strong>combinaciones efectivas</strong> (ataque inteligente), no la fuerza bruta pura. El cálculo es: combinaciones_efectivas ÷ velocidad ÷ 2 (media estadística). Las velocidades están basadas en benchmarks reales de <strong>Hashcat</strong> y hardware actual (2024). Los tiempos son orientativos; un atacante con recursos podría ser más rápido.</span></span>
+        <span class="info-tip" tabindex="0"><span class="info-content">Tiempo medio estimado para descifrar la contraseña en 4 escenarios reales de ataque, usando las <strong>combinaciones efectivas</strong> (ataque inteligente), no la fuerza bruta pura. El cálculo es: combinaciones_efectivas ÷ velocidad ÷ 2 (media estadística). Las velocidades están basadas en benchmarks reales de <strong>Hashcat</strong> y hardware de referencia de gama alta. Los tiempos son orientativos; un atacante con recursos podría ser más rápido.</span></span>
       </div>
       <div class="crack-scenarios" id="crackScenarios"></div>
     </div>
@@ -554,10 +552,10 @@
 
   <footer>
     <p>
-      <strong>· Greenpeace España · Desarrollo Tecnológico ·</strong><br>
-      Herramienta creada con ayuda de IA.<br>
+      <strong>Greenpeace España · Desarrollo Tecnológico</strong><br>
+      Herramienta de uso interno, creada con ayuda de IA.<br>
       Ninguna contraseña introducida es almacenada, registrada ni transmitida. Todo el análisis de robustez se ejecuta localmente en tu navegador mediante JavaScript. La única conexión externa es la verificación de filtraciones con la API de Have I Been Pwned, que utiliza el protocolo de k-anonymity (solo se envían 5 de los 40 caracteres del hash SHA-1). Los criterios de evaluación siguen las directrices de NIST SP 800-63B, OWASP y la metodología de descomposición por patrones de zxcvbn. El código fuente es abierto y auditable en <a href="https://github.com/akka-cod/pass_analyzer" target="_blank" rel="noopener noreferrer" style="color:var(--gp-green);text-decoration:underline;">github.com/akka-cod/pass_analyzer</a>.<br>
-      <strong>· Equipo IT ·</strong>
+      <strong>Equipo IT · soporte.it.es@greenpeace.org</strong>
     </p>
   </footer>
 </div>
@@ -574,7 +572,8 @@ function esc(str) {
 
 // ===== STATE =====
 let currentType = 'password';
-let debounceTimer = null;
+let debounceTimer = null;  // Timer for local analysis (fast: 300ms)
+let breachTimer = null;    // Timer for HIBP API call (slow: 1000ms)
 
 // ===== DOM =====
 const inputEl = document.getElementById('passwordInput');
@@ -582,8 +581,14 @@ const resultsEl = document.getElementById('results');
 
 // ===== EVENTS =====
 inputEl.addEventListener('input', () => {
+  // Local analysis: fast debounce (300ms) for responsive UI
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => analyze(inputEl.value), 300);
+  // HIBP breach check: slower debounce (1000ms) to reduce API calls
+  clearTimeout(breachTimer);
+  breachTimer = setTimeout(() => {
+    if (inputEl.value) checkBreach(inputEl.value);
+  }, 1000);
 });
 
 document.getElementById('toggleVis').addEventListener('click', function() {
@@ -594,6 +599,7 @@ document.getElementById('toggleVis').addEventListener('click', function() {
 
 document.getElementById('clearBtn').addEventListener('click', () => {
   inputEl.value = '';
+  clearTimeout(breachTimer);
   resultsEl.classList.remove('visible');
   inputEl.focus();
 });
@@ -603,7 +609,10 @@ document.querySelectorAll('.type-btn').forEach(btn => {
     document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentType = btn.dataset.type;
-    if (inputEl.value) analyze(inputEl.value);
+    if (inputEl.value) {
+      analyze(inputEl.value);
+      checkBreach(inputEl.value);
+    }
   });
 });
 
@@ -718,7 +727,8 @@ function analyze(password) {
   renderCrackTime(a);
   renderPatterns(a);
   renderTips(a);
-  checkBreach(password);
+  // Note: checkBreach() is called separately with its own 1000ms debounce
+  // to reduce unnecessary API calls while typing
 }
 
 function analyzePassword(pw) {
@@ -741,7 +751,7 @@ function analyzePassword(pw) {
   if (hasLower) pool += 26;
   if (hasUpper) pool += 26;
   if (hasDigit) pool += 10;
-  if (hasSymbol) pool += 33;
+  if (hasSymbol) pool += 32;
   if (hasSpace) pool += 1;
 
   const naiveEntropy = pool > 0 ? len * Math.log2(pool) : 0;
@@ -780,7 +790,7 @@ function estimateSmartGuesses(pw) {
   if (/[a-z]/.test(pw)) pool += 26;
   if (/[A-Z]/.test(pw)) pool += 26;
   if (/[0-9]/.test(pw)) pool += 10;
-  if (/[^a-zA-Z0-9\s]/.test(pw)) pool += 33;
+  if (/[^a-zA-Z0-9\s]/.test(pw)) pool += 32;
   if (/\s/.test(pw)) pool += 1;
   const bruteGuesses = Math.pow(pool || 1, pw.length);
 
@@ -936,7 +946,7 @@ function findBestToken(str) {
     } else {
       candidates.push({
         token: symMatch[0], type: 'Símbolos',
-        guesses: Math.pow(33, symMatch[0].length), length: symMatch[0].length
+        guesses: Math.pow(32, symMatch[0].length), length: symMatch[0].length
       });
     }
   }
@@ -961,7 +971,7 @@ function findBestToken(str) {
 
   // Fallback: single character
   const c = str[0];
-  let charPool = 33;
+  let charPool = 32;
   if (/[a-z]/.test(c)) charPool = 26;
   else if (/[A-Z]/.test(c)) charPool = 26;
   else if (/[0-9]/.test(c)) charPool = 10;
