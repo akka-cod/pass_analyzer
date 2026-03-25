@@ -2,7 +2,7 @@
 
 Analizador de robustez de contraseñas. Herramienta web de un solo archivo HTML que evalúa la fortaleza de contraseñas y passphrases de forma local y privada.
 
-#### Enlace público para uso de la herramienta: https://akka-cod.github.io/pass_analyzer/
+Enlace a la web y software actualizado: https://akka-cod.github.io/pass_analyzer/
 
 ## Qué hace
 
@@ -13,11 +13,42 @@ Analizador de robustez de contraseñas. Herramienta web de un solo archivo HTML 
 
 ## Privacidad
 
-Todo el análisis se ejecuta localmente en el navegador mediante JavaScript. No hay backend, no se almacenan datos, no se registran contraseñas. La única conexión de red es la verificación HIBP con k-anonymity.
+Todo el análisis se ejecuta localmente en el navegador mediante JavaScript. No hay backend, no se almacenan datos, no se registran contraseñas. La única conexión de red es la verificación HIBP con k-anonymity. No se cargan fuentes ni recursos de terceros (zero tracking).
 
 ## Uso
 
 Abrir `index.html` en cualquier navegador. Funciona completamente offline (excepto la verificación de filtraciones, que requiere conexión).
+
+## Nota para despliegues fuera de GitHub Pages
+
+La herramienta incluye la directiva `frame-ancestors 'none'` en la Content Security Policy para prevenir ataques de clickjacking (que la página sea embebida en un iframe malicioso). Sin embargo, según la especificación W3C, esta directiva **es ignorada cuando se declara mediante meta tag HTML** — solo tiene efecto como header HTTP del servidor.
+
+En GitHub Pages esto no es un problema porque el servicio envía automáticamente el header `X-Frame-Options: DENY`, que proporciona la misma protección.
+
+**Si despliegas esta herramienta en un servidor propio**, debes configurar los headers HTTP del servidor para garantizar la protección. Ejemplo para los servidores más comunes:
+
+**Nginx:**
+```
+add_header X-Frame-Options "DENY" always;
+add_header Content-Security-Policy "frame-ancestors 'none'" always;
+```
+
+**Apache (.htaccess):**
+```
+Header always set X-Frame-Options "DENY"
+Header always set Content-Security-Policy "frame-ancestors 'none'"
+```
+
+**Google Cloud Storage / Firebase Hosting** (en `firebase.json`):
+```json
+"headers": [{
+  "source": "**",
+  "headers": [
+    { "key": "X-Frame-Options", "value": "DENY" },
+    { "key": "Content-Security-Policy", "value": "frame-ancestors 'none'" }
+  ]
+}]
+```
 
 ## Referencias
 
@@ -29,4 +60,4 @@ Herramienta desarrollada por el equipo de Desarrollo Tecnológico de **Greenpeac
 
 ---
 
-* · Equipo IT ·
+*· Equipo IT ·*
